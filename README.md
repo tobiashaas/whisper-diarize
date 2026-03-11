@@ -79,11 +79,12 @@ cd whisper-diarize
 
 ```powershell
 python -m venv venv
-venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
 ```
 
 > Die virtuelle Umgebung isoliert alle Pakete vom System-Python.
 > Nach dem Aktivieren erscheint `(venv)` am Anfang der Eingabezeile.
+> In der klassischen Windows-Eingabeaufforderung (CMD) lautet der Befehl stattdessen `venv\Scripts\activate.bat`.
 
 ### 3. Pakete installieren
 
@@ -120,7 +121,7 @@ Erwartete Ausgabe bei GPU: `CUDA verfuegbar: True`
 
 ```powershell
 cd whisper-diarize
-venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
 
 # Einfach starten (nutzt HF_TOKEN aus Umgebungsvariable)
 python transcribe_full.py interview.mp4
@@ -136,6 +137,12 @@ python transcribe_full.py interview.mp4 --language en --model large-v2
 
 # Alle Optionen anzeigen
 python transcribe_full.py --help
+```
+
+Alternativ ohne Aktivierung direkt mit dem Interpreter aus dem Projekt-venv:
+
+```powershell
+.\venv\Scripts\python.exe transcribe_full.py interview.mp4
 ```
 
 ### Alle Optionen
@@ -158,6 +165,37 @@ python transcribe_full.py --help
 | `turbo` | sehr schnell | gut | ~2 GB |
 | `large-v2` | langsamer | sehr gut | ~5 GB |
 | `large-v3` | langsamer | am besten | ~5 GB |
+
+---
+
+## Troubleshooting
+
+### `WinError 127` / `libtorchaudio` / `Die angegebene Prozedur wurde nicht gefunden`
+
+Wenn du so einen Fehler siehst, läuft das Skript fast immer im falschen Python-Interpreter oder mit einer kaputten `torch`/`torchaudio`-Kombination.
+
+**PowerShell (empfohlen):**
+
+```powershell
+cd "C:\Github\Whisper TTS"
+.\venv\Scripts\Activate.ps1
+python transcribe_full.py "C:\Pfad\zur\datei.mp4"
+```
+
+**Ohne Aktivierung direkt:**
+
+```powershell
+.\venv\Scripts\python.exe transcribe_full.py "C:\Pfad\zur\datei.mp4"
+```
+
+Falls `Activate.ps1` blockiert wird:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\venv\Scripts\Activate.ps1
+```
+
+Wenn du versehentlich das globale Python benutzt, kann Windows andere Paketversionen laden als im Projekt-venv. Genau das fuehrt haeufig zu `torchaudio`-Fehlern.
 
 ---
 

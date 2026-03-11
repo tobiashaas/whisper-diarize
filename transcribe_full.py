@@ -26,6 +26,7 @@ import argparse
 import datetime
 import warnings
 import logging
+import importlib.metadata
 
 # Drittbibliothek-Warnungen unterdrücken
 warnings.filterwarnings("ignore", category=UserWarning, module="pyannote")
@@ -39,6 +40,57 @@ logging.getLogger("whisperx").setLevel(logging.WARNING)
 logging.getLogger("pyannote").setLevel(logging.WARNING)
 logging.getLogger("lightning").setLevel(logging.WARNING)
 logging.getLogger("pytorch_lightning").setLevel(logging.WARNING)
+
+def get_installed_version(package_name: str) -> str:
+    """Liest installierte Paketversionen ohne das Paket selbst zu importieren."""
+    try:
+        return importlib.metadata.version(package_name)
+    except importlib.metadata.PackageNotFoundError:
+        return "nicht installiert"
+
+def is_torchaudio_runtime_error(exc: Exception) -> bool:
+    """Erkennt haeufige Windows-Ladefehler rund um torch/torchaudio."""
+    text = f"{type(exc).__name__}: {exc}"
+    markers = [
+        "torchaudio",
+        "libtorchaudio",
+        "WinError 127",
+        "Could not load this library",
+        "Die angegebene Prozedur wurde nicht gefunden",
+    ]
+    return any(marker in text for marker in markers)
+
+def exit_with_torch_audio_help(exc: Exception):
+    """Bricht mit einer konkreten Hilfestellung fuer Windows/venv-Probleme ab."""
+    torch_version = get_installed_version("torch")
+    torchaudio_version = get_installed_version("torchaudio")
+    in_venv = sys.prefix != sys.base_prefix
+
+    print("\nFEHLER: Torch/Torchaudio konnte nicht korrekt geladen werden.")
+    print(f"Python-Interpreter: {sys.executable}")
+    print(f"venv aktiv:         {'ja' if in_venv else 'nein'}")
+    print(f"torch:              {torch_version}")
+    print(f"torchaudio:         {torchaudio_version}")
+    print(f"Details:            {exc}")
+    print("""
+Haeufige Ursachen unter Windows:
+  - Das Skript laeuft nicht im Projekt-venv
+  - torch und torchaudio passen in diesem Interpreter nicht zusammen
+  - Es wird das globale Python statt .\\venv\\Scripts\\python.exe verwendet
+
+PowerShell (empfohlen):
+  cd "C:\\Github\\Whisper TTS"
+  .\\venv\\Scripts\\Activate.ps1
+  python transcribe_full.py "<deine_datei>"
+
+Direkt ohne Aktivierung:
+  .\\venv\\Scripts\\python.exe transcribe_full.py "<deine_datei>"
+
+Falls Activate.ps1 durch die Execution Policy blockiert wird:
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  .\\venv\\Scripts\\Activate.ps1
+""")
+    sys.exit(1)
 
 def format_srt_time(seconds: float) -> str:
     """Formatiert Sekunden als SRT-Timestamp HH:MM:SS,mmm"""
@@ -98,8 +150,13 @@ def transcribe_full(
     max_speakers: int = None,
     device: str = "cpu",
 ):
-    import whisperx
-    import torch
+    try:
+        import whisperx
+        import torch
+    except Exception as exc:
+        if is_torchaudio_runtime_error(exc):
+            exit_with_torch_audio_help(exc)
+        raise
     # Lightning-Checkpoint-Upgrade-Meldung unterdrücken
     logging.getLogger("lightning.pytorch.utilities.upgrade_checkpoint").setLevel(logging.ERROR)
     logging.getLogger("lightning_fabric").setLevel(logging.WARNING)
@@ -127,7 +184,12 @@ def transcribe_full(
 
     # --- 1. Transkription ---
     print(f"\n[1/3] Lade WhisperX-Modell: {model_name} (device={device}, compute={compute_type})...")
-    model = whisperx.load_model(model_name, device=device, compute_type=compute_type)
+    try:
+        model = whisperx.load_model(model_name, device=device, compute_type=compute_type)
+    except Exception as exc:
+        if is_torchaudio_runtime_error(exc):
+            exit_with_torch_audio_help(exc)
+        raise
 
     print(f"[1/3] Transkribiere: {file_path}")
     audio = whisperx.load_audio(file_path)
