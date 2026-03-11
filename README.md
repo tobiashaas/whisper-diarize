@@ -1,8 +1,10 @@
-# whisper-diarize-premiere
+# whisper-diarize
 
-Lokale, GPU-beschleunigte Videotranskription mit **Sprechererkennung** und direktem Export für **Adobe Premiere Pro**.
+Lokale, GPU-beschleunigte Videotranskription mit **Sprechererkennung** und Export in Standardformate.
 
 Basiert auf [WhisperX](https://github.com/m-bain/whisperX) + [pyannote-audio](https://github.com/pyannote/pyannote-audio).
+
+> **Hinweis:** Es gibt keine direkte Software-Integration. Die Ausgabe sind offene Standardformate (SRT, CSV, TXT) die von nahezu jedem Video- und Textprogramm geöffnet werden können.
 
 ## Features
 
@@ -10,9 +12,9 @@ Basiert auf [WhisperX](https://github.com/m-bain/whisperX) + [pyannote-audio](ht
 - Automatische Sprechererkennung (Diarization) — unterscheidet SPEAKER_01, SPEAKER_02, ...
 - Wort-genaues Timestamp-Alignment
 - GPU-Unterstützung (CUDA) für schnelle Verarbeitung
-- Drei Ausgabeformate direkt für Adobe Premiere:
-  - `.srt` — Captions mit Sprecher-Labels (Datei > Importieren)
-  - `.csv` — Sequence Markers (Markers Panel > Marker importieren)
+- Drei Ausgabeformate (offene Standards, überall nutzbar):
+  - `.srt` — Standard-Untertitelformat (Premiere, DaVinci Resolve, Final Cut, YouTube, VLC, ...)
+  - `.csv` — Tabelle mit Timestamps & Sprecher (Excel, Premiere Markers, ...)
   - `.txt` — Lesbares Transkript nach Sprecher gruppiert
 
 ## Voraussetzungen
@@ -132,12 +134,23 @@ SPEAKER_02    Ja, wir waren ja schon...     00:00:30:11    00:00:44:12    00:00:
 ```
 **Import in Premiere:** Markers Panel → (Hamburger-Menü) → Marker importieren → `video_markers.csv`
 
-## Adobe Premiere Workflow
+## Verwendung der Ausgabedateien
 
-1. Video in Premiere importieren und in Sequenz ziehen
-2. SRT importieren: **Datei → Importieren** → `_speakers.srt` → als Caption-Track auf die Timeline ziehen
-3. Markers importieren: **Markers Panel öffnen** → Hamburger-Menü → **Marker importieren** → `_markers.csv`
-4. Sprecher umbenennen: In `_transcript.txt` nach `SPEAKER_01` suchen & ersetzen mit echtem Namen
+### SRT — Untertitel / Captions
+Standardformat, funktioniert überall:
+- **Adobe Premiere:** Datei → Importieren → `_speakers.srt` → als Caption-Track auf die Timeline ziehen
+- **DaVinci Resolve:** Timeline → Untertitel importieren
+- **Final Cut Pro:** Datei → Importieren → Captions
+- **YouTube / Vimeo:** Direkt beim Video-Upload hochladen
+- **VLC / jeder Player:** Automatisch erkannt wenn im gleichen Ordner wie das Video
+
+### CSV — Markers / Timestamps
+- **Adobe Premiere:** Markers Panel → Hamburger-Menü → Marker importieren
+- **Excel / Numbers:** Direkt öffnen für Protokoll oder Dokumentation
+
+### TXT — Lesbares Transkript
+- Für Protokolle, Dokumentation, Copy-Paste in Word/Notion/etc.
+- Sprecher umbenennen: `SPEAKER_01` suchen & ersetzen mit echtem Namen
 
 ## Genutzte Bibliotheken & Projekte
 
