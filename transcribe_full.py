@@ -3,8 +3,7 @@ Whisper TTS - Full Transcription with Speaker Diarization
 ==========================================================
 Outputs:
   - *_transcript.txt   : Lesbares Transkript mit Sprecher + Timestamps
-  - *_speakers.srt     : SRT-Datei fuer Adobe Premiere (Captions Import)
-  - *_markers.csv      : Adobe Premiere Sequence Markers (Import via Markers Panel)
+  - *_speakers.srt     : SRT-Datei fuer Premiere, Resolve, Final Cut, VLC, YouTube, ...
 
 Voraussetzungen:
   - HuggingFace Token mit Zugriff auf pyannote-Modelle
@@ -57,16 +56,6 @@ def format_readable_time(seconds: float) -> str:
     secs = seconds % 60
     return f"{minutes:02d}:{secs:05.2f}"
 
-def seconds_to_premiere_frames(seconds: float, fps: float = 25.0) -> str:
-    """Konvertiert Sekunden zu Premiere-kompatibler Timecode HH:MM:SS:FF"""
-    total_frames = int(seconds * fps)
-    ff = total_frames % int(fps)
-    total_secs = total_frames // int(fps)
-    hh = total_secs // 3600
-    mm = (total_secs % 3600) // 60
-    ss = total_secs % 60
-    return f"{hh:02d}:{mm:02d}:{ss:02d}:{ff:02d}"
-
 def save_txt(segments, output_path: str):
     """Speichert lesbares Transkript mit Sprecher + Timestamps"""
     with open(output_path, "w", encoding="utf-8") as f:
@@ -86,7 +75,7 @@ def save_txt(segments, output_path: str):
             f.write(f"  [{format_readable_time(start)} - {format_readable_time(end)}] {text}\n")
 
 def save_srt(segments, output_path: str):
-    """Speichert SRT-Datei mit Speaker-Labels fuer Adobe Premiere"""
+    """Speichert SRT-Datei mit Speaker-Labels fuer gaengige Schnittprogramme"""
     with open(output_path, "w", encoding="utf-8") as f:
         for i, seg in enumerate(segments, start=1):
             speaker = seg.get("speaker", "UNKNOWN")
@@ -98,47 +87,6 @@ def save_srt(segments, output_path: str):
             f.write(f"{start} --> {end}\n")
             f.write(f"[{speaker}] {text}\n\n")
 
-def save_premiere_markers_csv(segments, output_path: str, fps: float = 25.0):
-    """
-    Speichert Adobe Premiere Sequence Markers als CSV.
-    Import: Premiere > Markers Panel > Import Markers (Hamburger-Menu)
-    """
-    with open(output_path, "w", encoding="utf-8") as f:
-        # Premiere Markers CSV Header
-        f.write("Name\tDescription\tIn\tOut\tDuration\tMarker Type\n")
-
-        current_speaker = None
-        block_start = None
-        block_texts = []
-
-        for seg in segments:
-            speaker = seg.get("speaker", "UNKNOWN")
-            text = seg["text"].strip()
-
-            if speaker != current_speaker:
-                # Vorherigen Block schreiben
-                if current_speaker is not None and block_texts:
-                    in_tc = seconds_to_premiere_frames(block_start, fps)
-                    out_tc = seconds_to_premiere_frames(seg["start"], fps)
-                    dur_tc = seconds_to_premiere_frames(seg["start"] - block_start, fps)
-                    desc = " ".join(block_texts)[:200]  # Premiere-Limit
-                    f.write(f"{current_speaker}\t{desc}\t{in_tc}\t{out_tc}\t{dur_tc}\tComment\n")
-
-                current_speaker = speaker
-                block_start = seg["start"]
-                block_texts = [text]
-            else:
-                block_texts.append(text)
-
-        # Letzten Block schreiben
-        if current_speaker and block_texts:
-            last_end = segments[-1]["end"]
-            in_tc = seconds_to_premiere_frames(block_start, fps)
-            out_tc = seconds_to_premiere_frames(last_end, fps)
-            dur_tc = seconds_to_premiere_frames(last_end - block_start, fps)
-            desc = " ".join(block_texts)[:200]
-            f.write(f"{current_speaker}\t{desc}\t{in_tc}\t{out_tc}\t{dur_tc}\tComment\n")
-
 def transcribe_full(
     file_path: str,
     model_name: str = "turbo",
@@ -148,7 +96,6 @@ def transcribe_full(
     num_speakers: int = None,
     min_speakers: int = None,
     max_speakers: int = None,
-    fps: float = 25.0,
     device: str = "cpu",
 ):
     import whisperx
@@ -259,16 +206,12 @@ Speichere Transkript ohne Speaker-Labels...
 
     txt_path = base_path + "_transcript.txt"
     srt_path = base_path + "_speakers.srt"
-    csv_path = base_path + "_markers.csv"
 
     save_txt(segments, txt_path)
     print(f"\nTranskript gespeichert:       {txt_path}")
 
     save_srt(segments, srt_path)
-    print(f"SRT (Premiere Captions):      {srt_path}")
-
-    save_premiere_markers_csv(segments, csv_path, fps=fps)
-    print(f"CSV (Premiere Markers):       {csv_path}")
+    print(f"SRT (Untertitel):             {srt_path}")
 
     print("\n--- Vorschau (erste 10 Segmente) ---")
     for seg in segments[:10]:
@@ -278,15 +221,13 @@ Speichere Transkript ohne Speaker-Labels...
     if len(segments) > 10:
         print(f"  ... ({len(segments) - 10} weitere Segmente)")
 
-    print("\nAdobe Premiere Nutzung:")
-    print(f"  Captions:  Datei > Importieren > {os.path.basename(srt_path)}")
-    print(f"  Markers:   Markers-Panel > Marker importieren > {os.path.basename(csv_path)}")
-    print(f"  FPS:       {fps} fps (mit --fps anpassen falls noetig)")
+    print("\nImport in Schnittprogramme:")
+    print(f"  SRT:       Datei > Importieren > {os.path.basename(srt_path)}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Whisper Transkription mit Speaker Diarization fuer Adobe Premiere",
+        description="Whisper Transkription mit Speaker Diarization und SRT-Export",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
@@ -306,8 +247,6 @@ if __name__ == "__main__":
                         help="Minimale Anzahl Sprecher")
     parser.add_argument("--max-speakers", type=int, default=None,
                         help="Maximale Anzahl Sprecher")
-    parser.add_argument("--fps", type=float, default=25.0,
-                        help="Frames pro Sekunde fuer Premiere Markers (default: 25.0)")
     parser.add_argument("--device", default="cuda", choices=["cpu", "cuda"],
                         help="Rechengeraet (default: cuda, fallback: cpu)")
 
@@ -324,6 +263,5 @@ if __name__ == "__main__":
         num_speakers=args.speakers,
         min_speakers=args.min_speakers,
         max_speakers=args.max_speakers,
-        fps=args.fps,
         device=args.device,
     )

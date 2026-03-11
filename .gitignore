@@ -8,7 +8,6 @@ __pycache__/
 *_transcript_timestamps.txt
 *_transcript_speakers.txt
 *_speakers.srt
-*_markers.csv
 *.vtt
 
 # Audio/Video-Dateien
@@ -37,3 +36,4 @@ desktop.ini
 .vscode/
 .idea/
 *.swp
+.firecrawl/

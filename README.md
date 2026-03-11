@@ -10,9 +10,8 @@ Basiert auf [WhisperX](https://github.com/m-bain/whisperX) + [pyannote-audio](ht
 - Automatische Sprechererkennung (Diarization) — unterscheidet SPEAKER_01, SPEAKER_02, ...
 - Wort-genaues Timestamp-Alignment
 - GPU-Unterstützung (CUDA) für schnelle Verarbeitung
-- Drei Ausgabeformate (offene Standards, überall nutzbar):
+- Zwei Ausgabeformate (offene Standards, überall nutzbar):
   - `.srt` — Standard-Untertitelformat (Premiere, DaVinci Resolve, Final Cut, YouTube, VLC, ...)
-  - `.csv` — Tabelle mit Timestamps & Sprecher (Excel, Premiere Markers, ...)
   - `.txt` — Lesbares Transkript nach Sprecher gruppiert
 
 ---
@@ -149,7 +148,6 @@ python transcribe_full.py --help
 | `--speakers` | auto | Exakte Anzahl Sprecher — verbessert die Genauigkeit wenn bekannt |
 | `--min-speakers` | — | Minimale Sprecheranzahl |
 | `--max-speakers` | — | Maximale Sprecheranzahl |
-| `--fps` | `25.0` | Framerate des Videos für Premiere Markers (24, 25, 30, 60, ...) |
 | `--device` | `cuda` | `cuda` für GPU, `cpu` für Prozessor |
 | `--diarize-model` | `pyannote/speaker-diarization-3.1` | Alternatives pyannote-Modell |
 
@@ -165,7 +163,7 @@ python transcribe_full.py --help
 
 ## Ausgabe
 
-Für jede Eingabedatei `video.mp4` werden drei Dateien im selben Ordner erzeugt:
+Für jede Eingabedatei `video.mp4` werden zwei Dateien im selben Ordner erzeugt:
 
 ### `video_transcript.txt`
 Lesbares Transkript, nach Sprecher gruppiert:
@@ -191,54 +189,44 @@ Standard-Untertitelformat mit Sprecher-Labels:
 [SPEAKER_02] Ut enim ad minim veniam, quis nostrud exercitation ullamco...
 ```
 
-### `video_markers.csv`
-Zeitstempel-Tabelle mit Sprecherzuordnung:
-```
-Name        Description                    In             Out            Duration       Marker Type
-SPEAKER_01  Lorem ipsum dolor sit amet...  00:00:00:00    00:00:31:10    00:00:31:10    Comment
-SPEAKER_02  Ut enim ad minim veniam...     00:00:31:20    00:01:05:08    00:00:33:13    Comment
-```
-
----
-
 ## Import-Anleitungen
+
+> **Wichtig:** Eine `.srt`-Datei wird in den folgenden Tools als **Untertitel / Captions** importiert, nicht als Timeline-Marker.
+> Die Sprecherlabels wie `[SPEAKER_01]` bleiben dabei als Text im Untertitel erhalten.
+> Wenn du echte Marker brauchst, musst du sie im jeweiligen Tool separat erzeugen oder aus einem anderen Format ableiten.
 
 ### Adobe Premiere Pro
 
-#### SRT als Captions (Untertitelspur)
+#### SRT als Captions (Untertitelspur, nicht als Marker)
 1. **Datei → Importieren** → `video_speakers.srt` auswählen
 2. Die SRT-Datei erscheint im Projektfenster
 3. Auf die Timeline ziehen — Premiere erstellt automatisch einen **Caption-Track**
 4. Im Caption-Track sind alle Segmente mit `[SPEAKER_01]` / `[SPEAKER_02]` beschriftet
 5. Optional: Im **Captions-Panel** Schriftart und Stil anpassen
 
-Offizielle Dokumentation: [Captions in Premiere Pro](https://helpx.adobe.com/premiere-pro/using/working-with-captions.html)
-
-#### CSV als Sequence Markers
-1. **Markers Panel** öffnen: Fenster → Marker
-2. Hamburger-Menü (☰) oben rechts → **Marker importieren**
-3. `video_markers.csv` auswählen
-4. Marker erscheinen auf der Timeline — nützlich zur Navigation zwischen Sprechern
-
-> **Wichtig:** Die FPS der CSV muss zur Premiere-Sequenz passen.
-> Standard ist 25 fps — bei anderen Framerates `--fps 24` / `--fps 30` / `--fps 60` angeben.
-
-Offizielle Dokumentation: [Marker in Premiere Pro](https://helpx.adobe.com/premiere-pro/using/markers.html)
+Offizielle Dokumentation:
+- [Import caption file from third-party service](https://helpx.adobe.com/ca/premiere/desktop/add-text-images/insert-captions/import-caption-file-from-third-party-service.html)
+- [Supported file formats for captions](https://helpx.adobe.com/ca/premiere/desktop/add-text-images/insert-captions/supported-file-formats-for-captions.html)
 
 ---
 
 ### DaVinci Resolve
 
 #### SRT als Untertitel
-1. Im **Cut** oder **Edit**-Tab: **Timeline → Import Subtitles** → `video_speakers.srt`
-2. Alternativ: Im Media Pool Rechtsklick → **Import Media** → SRT-Datei wählen, dann auf die Timeline ziehen
-3. Ein **Subtitle Track** wird automatisch erstellt
-4. Im **Inspector** lassen sich Schrift, Farbe und Position anpassen
+1. Projekt bzw. Timeline öffnen
+2. **Datei → Import → Subtitle** wählen
+3. `video_speakers.srt` auswählen
+4. Die SRT-Datei landet im Media Pool / Bin
+5. Die importierte Subtitle-Datei an den Anfang der Timeline ziehen
+6. Resolve legt dafür eine **Subtitle Track** an
+7. Im **Inspector** lassen sich Text, Stil, Position und Track-Einstellungen anpassen
 
 > DaVinci Resolve Free unterstützt SRT-Import vollständig.
-> Der Premiere-Markers-CSV ist nicht mit Resolve kompatibel — die SRT-Spur ist hier die richtige Wahl.
+> Die SRT-Spur ist hier die richtige Wahl.
 
-Offizielle Dokumentation: [DaVinci Resolve Manual](https://documents.blackmagicdesign.com/UserManuals/DaVinci-Resolve-Manual.pdf) (Kapitel "Subtitles and Captions")
+Offizielle Dokumentation:
+- [DaVinci Resolve 20 Editors Guide](https://documents.blackmagicdesign.com/UserManuals/DaVinci-Resolve-20-Editors-Guide.pdf?_v=1757574010000)
+- [DaVinci Resolve 19 Beginner's Guide](https://documents.blackmagicdesign.com/UserManuals/DaVinci-Resolve-19-Beginners-Guide.pdf?_v=1741161610000)
 
 ---
 
@@ -247,14 +235,48 @@ Offizielle Dokumentation: [DaVinci Resolve Manual](https://documents.blackmagicd
 #### SRT als Captions
 1. Projekt öffnen, Video in der Timeline
 2. **Datei → Importieren → Captions** → `video_speakers.srt` auswählen
-3. Im Dialog **"Zu vorhandenem Clip hinzufügen"** wählen
-4. Captions erscheinen als eigene Spur über dem Video-Clip
-5. Im **Caption Editor** (Darstellung → Captions anzeigen) lassen sich Texte und Timing nachbearbeiten
+3. Im Import-Dialog eine **Caption Role** und die gewünschte Sprache wählen
+4. Bei der Positionierung **Relative to Timeline** wählen, wenn die SRT ab dem Projektstart einsortiert werden soll
+5. Import bestätigen
+6. Captions erscheinen als eigene Spur oben in der Timeline
+7. Im **Caption Editor** lassen sich Texte und Timing nachbearbeiten
 
 > SRT wird nativ unterstützt ab Final Cut Pro 10.6.5.
 > Bei älteren Versionen: SRT zuerst mit [Subtitle Edit](https://www.nikse.dk/subtitleedit) in CEA-608 konvertieren.
 
-Offizielle Dokumentation: [Captions in Final Cut Pro](https://support.apple.com/guide/final-cut-pro/captions-overview-ver346df5f4/mac)
+Offizielle Dokumentation:
+- [Import captions into Final Cut Pro for Mac](https://support.apple.com/guide/final-cut-pro/import-captions-ver4185ef95a/mac)
+- [Intro to captions in Final Cut Pro for Mac](https://support.apple.com/guide/final-cut-pro/intro-to-captions-ver00e40835d/mac)
+
+---
+
+### YouTube Studio
+
+#### SRT als Untertitel hochladen
+1. In **YouTube Studio** das gewünschte Video öffnen
+2. Links **Subtitles** wählen
+3. Falls nötig zuerst **ADD LANGUAGE** klicken und die Sprache auswählen
+4. Unter **Subtitles** auf **ADD** klicken
+5. **Upload file** wählen
+6. Bei einer `.srt`-Datei **With timing** auswählen und hochladen
+
+Offizielle Dokumentation:
+- [Add subtitles & captions](https://support.google.com/youtube/answer/2734796?hl=en)
+- [Supported subtitle and closed caption files](https://support.google.com/youtube/answer/2734698?hl=en)
+
+---
+
+### Vimeo
+
+#### SRT als Untertitel oder Captions hochladen
+1. Die Video-Seite in Vimeo öffnen
+2. Links im Player-Bereich **Languages** wählen
+3. Die `.srt`-Datei vom Rechner hochladen
+4. Für die Datei **Language** und **Type** (`Subtitle` oder `Caption`) auswählen
+5. Mit **Upload** bestätigen
+
+Offizielle Dokumentation:
+- [How to add captions or subtitles to my video](https://help.vimeo.com/hc/en-us/articles/21956884955537-How-to-add-captions-or-subtitles-to-my-video)
 
 ---
 
@@ -262,12 +284,11 @@ Offizielle Dokumentation: [Captions in Final Cut Pro](https://support.apple.com/
 
 | Anwendung | Format | Verwendung |
 |-----------|--------|-----------|
-| YouTube Studio | `.srt` | Video hochladen → Untertitel → Datei hochladen |
-| Vimeo | `.srt` | Video-Einstellungen → Distribution → Untertitel |
-| VLC / jeder Player | `.srt` | Gleicher Ordner + gleicher Dateiname wie Video → automatisch erkannt |
+| YouTube Studio | `.srt` | Im Subtitles-Bereich als Datei mit Timing hochladen |
+| Vimeo | `.srt` | Im Languages-Bereich hochladen und Sprache/Typ zuweisen |
+| VLC / jeder Player | `.srt` | Gleicher Ordner + gleicher Dateiname wie Video; falls nicht automatisch geladen: Untertiteldatei manuell im Player wählen |
 | Word / Google Docs | `.txt` | Öffnen oder einfügen als Protokoll / Transkript-Dokument |
 | Notion / Obsidian | `.txt` | Direkt als Notiz einfügen |
-| Excel / Numbers | `.csv` | Öffnen für Auswertung, Zeiterfassung, Dokumentation |
 
 ### Sprecher umbenennen
 
