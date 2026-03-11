@@ -145,6 +145,15 @@ Alternativ ohne Aktivierung direkt mit dem Interpreter aus dem Projekt-venv:
 .\venv\Scripts\python.exe transcribe_full.py interview.mp4
 ```
 
+**Windows PowerShell: robuster Direktaufruf**
+
+```powershell
+.\venv\Scripts\python.exe .\transcribe_full.py "C:\Pfad\mit Leerzeichen\video.mp4"
+```
+
+> Lange Windows-Pfade immer in **Anführungszeichen** und in **einer Zeile** übergeben.
+> Das ist besonders wichtig bei Pfaden mit Leerzeichen oder Zeichen wie `&`.
+
 ### Alle Optionen
 
 | Option | Standard | Beschreibung |
