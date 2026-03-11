@@ -1,0 +1,39 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Transkript-Ausgaben (keine persönlichen Daten ins Repo)
+*_transcript.txt
+*_transcript_timestamps.txt
+*_transcript_speakers.txt
+*_speakers.srt
+*_markers.csv
+*.vtt
+
+# Audio/Video-Dateien
+*.mp4
+*.mp3
+*.wav
+*.m4a
+*.mov
+*.avi
+*.mkv
+*.flac
+*.ogg
+
+# HuggingFace Cache
+.cache/
+
+# Umgebungsvariablen (niemals einchecken!)
+.env
+*.env
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
