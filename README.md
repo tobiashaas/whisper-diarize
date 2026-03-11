@@ -4,8 +4,6 @@ Lokale, GPU-beschleunigte Videotranskription mit **Sprechererkennung** und Expor
 
 Basiert auf [WhisperX](https://github.com/m-bain/whisperX) + [pyannote-audio](https://github.com/pyannote/pyannote-audio).
 
-> **Hinweis:** Es gibt keine direkte Software-Integration. Die Ausgabe sind offene Standardformate (SRT, CSV, TXT) die von nahezu jedem Video- und Textprogramm geöffnet werden können.
-
 ## Features
 
 - Transkription via [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (erheblich schneller als OpenAI Whisper)
@@ -17,52 +15,107 @@ Basiert auf [WhisperX](https://github.com/m-bain/whisperX) + [pyannote-audio](ht
   - `.csv` — Tabelle mit Timestamps & Sprecher (Excel, Premiere Markers, ...)
   - `.txt` — Lesbares Transkript nach Sprecher gruppiert
 
+---
+
 ## Voraussetzungen
 
 ### Hardware
-- Empfohlen: NVIDIA GPU mit CUDA-Unterstützung
-- Funktioniert auch auf CPU (langsamer)
+- Empfohlen: NVIDIA GPU mit CUDA-Unterstützung (ab ~4 GB VRAM)
+- Funktioniert auch auf CPU (deutlich langsamer)
 
 ### Software
-- Python 3.10+
-- [FFmpeg](https://ffmpeg.org/download.html) (im PATH)
-- NVIDIA CUDA 12.x Treiber (für GPU-Nutzung)
+- Python 3.10 oder neuer → https://www.python.org/downloads/
+- Git → https://git-scm.com/downloads
+- FFmpeg (für Audio-Extraktion aus Videos) → https://ffmpeg.org/download.html
+  - Windows: [gpl-shared Build herunterladen](https://github.com/BtbN/FFmpeg-Builds/releases), entpacken und den `bin`-Ordner zum PATH hinzufügen
+- NVIDIA GPU: CUDA-Treiber 12.x → https://developer.nvidia.com/cuda-downloads
 
 ### HuggingFace Token (für Sprechererkennung)
 
-Die Sprechererkennung nutzt pyannote-Modelle, die eine einmalige Registrierung erfordern:
+Die Sprechererkennung nutzt pyannote-Modelle, die hinter einer kostenlosen Zugangsbeschränkung liegen.
+Einmalige Einrichtung (ca. 5 Minuten):
 
-1. **Account erstellen:** https://huggingface.co/join
-2. **Token erstellen:** https://huggingface.co/settings/tokens (Read-Zugriff reicht)
-3. **Modell-Zugriff beantragen** (einmalig, auf beiden Seiten "Agree" klicken):
-   - https://huggingface.co/pyannote/speaker-diarization-3.1
-   - https://huggingface.co/pyannote/segmentation-3.0
-4. **Token setzen** (Windows PowerShell):
-   ```powershell
-   $env:HF_TOKEN = "hf_xxxx"
-   ```
-   Oder dauerhaft über: Systemsteuerung → Umgebungsvariablen → `HF_TOKEN`
+**Schritt 1 — Account & Token:**
+1. Kostenlosen Account erstellen: https://huggingface.co/join
+2. Token erstellen (Read-Zugriff reicht): https://huggingface.co/settings/tokens
+3. Token kopieren — er beginnt mit `hf_...`
 
-> Die Modelle werden beim ersten Start heruntergeladen (~35 MB) und danach lokal gecacht. Kein Internet mehr nötig.
+**Schritt 2 — Modell-Zugriff beantragen:**
+Beide Seiten aufrufen, einloggen und auf **"Agree and access repository"** klicken:
+- https://huggingface.co/pyannote/speaker-diarization-3.1
+- https://huggingface.co/pyannote/segmentation-3.0
+
+**Schritt 3 — Token verfügbar machen:**
+
+Option A — dauerhaft (empfohlen):
+- Windows: Systemsteuerung → System → Erweiterte Systemeinstellungen → Umgebungsvariablen
+- Neue Benutzervariable: Name `HF_TOKEN`, Wert `hf_xxxx`
+- Terminal neu starten
+
+Option B — nur für aktuelle PowerShell-Sitzung:
+```powershell
+$env:HF_TOKEN = "hf_xxxx"
+```
+
+Option C — direkt als Argument beim Aufruf:
+```powershell
+python transcribe_full.py video.mp4 --hf-token hf_xxxx
+```
+
+> Die Modelle werden beim ersten Start heruntergeladen (~35 MB) und danach lokal gecacht.
+> Ab dem zweiten Start ist kein Internet mehr nötig.
+
+---
 
 ## Installation
 
-```powershell
-# Repository klonen
-git clone https://github.com/USERNAME/whisper-diarize.git
-cd whisper-diarize
+### 1. Repository klonen
 
-# Virtuelle Umgebung erstellen
+```powershell
+git clone https://github.com/tobiashaas/whisper-diarize.git
+cd whisper-diarize
+```
+
+### 2. Virtuelle Umgebung erstellen
+
+```powershell
 python -m venv venv
 venv\Scripts\activate
+```
 
-# Abhängigkeiten installieren (CPU)
-pip install whisperx pyannote-audio
+> Die virtuelle Umgebung isoliert alle Pakete vom System-Python.
+> Nach dem Aktivieren erscheint `(venv)` am Anfang der Eingabezeile.
 
-# Abhängigkeiten installieren (GPU, CUDA 12.8)
+### 3. Pakete installieren
+
+**Option A — Mit NVIDIA GPU (empfohlen):**
+
+Zuerst PyTorch mit CUDA-Support installieren (Größe: ~2,9 GB):
+```powershell
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+
+Dann die restlichen Pakete:
+```powershell
 pip install whisperx pyannote-audio hf_xet
 ```
+
+**Option B — Nur CPU:**
+```powershell
+pip install whisperx pyannote-audio
+```
+
+> `hf_xet` ist optional, beschleunigt aber den einmaligen Modell-Download erheblich.
+
+### 4. Installation prüfen
+
+```powershell
+python -c "import torch; print('CUDA verfuegbar:', torch.cuda.is_available())"
+```
+
+Erwartete Ausgabe bei GPU: `CUDA verfuegbar: True`
+
+---
 
 ## Verwendung
 
@@ -70,69 +123,83 @@ pip install whisperx pyannote-audio hf_xet
 cd whisper-diarize
 venv\Scripts\activate
 
-# Einfach (nutzt HF_TOKEN aus Umgebungsvariable)
+# Einfach starten (nutzt HF_TOKEN aus Umgebungsvariable)
 python transcribe_full.py interview.mp4
 
 # Mit explizitem Token
 python transcribe_full.py interview.mp4 --hf-token hf_xxxx
 
 # Mit bekannter Sprecheranzahl (verbessert Genauigkeit)
-python transcribe_full.py interview.mp4 --hf-token hf_xxxx --speakers 2
+python transcribe_full.py interview.mp4 --speakers 2
 
-# Alle Optionen
+# Englisches Video, besseres Modell
+python transcribe_full.py interview.mp4 --language en --model large-v2
+
+# Alle Optionen anzeigen
 python transcribe_full.py --help
 ```
 
-### Optionen
+### Alle Optionen
 
 | Option | Standard | Beschreibung |
 |--------|----------|--------------|
 | `--model` | `turbo` | Whisper-Modell: `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`, `turbo` |
-| `--language` | `de` | Sprache: `de`, `en`, `fr`, ... oder `auto` |
-| `--hf-token` | `HF_TOKEN` | HuggingFace Token für Sprechererkennung |
-| `--speakers` | auto | Exakte Anzahl Sprecher (optional, verbessert Genauigkeit) |
+| `--language` | `de` | Sprache: `de`, `en`, `fr`, `es`, ... oder `auto` für automatische Erkennung |
+| `--hf-token` | `$HF_TOKEN` | HuggingFace Token für Sprechererkennung |
+| `--speakers` | auto | Exakte Anzahl Sprecher — verbessert die Genauigkeit wenn bekannt |
 | `--min-speakers` | — | Minimale Sprecheranzahl |
 | `--max-speakers` | — | Maximale Sprecheranzahl |
-| `--fps` | `25.0` | Framerate für Premiere Markers (25, 24, 30, ...) |
-| `--device` | `cuda` | `cuda` (GPU) oder `cpu` |
-| `--diarize-model` | `pyannote/speaker-diarization-3.1` | Pyannote-Modell |
+| `--fps` | `25.0` | Framerate des Videos für Premiere Markers (24, 25, 30, 60, ...) |
+| `--device` | `cuda` | `cuda` für GPU, `cpu` für Prozessor |
+| `--diarize-model` | `pyannote/speaker-diarization-3.1` | Alternatives pyannote-Modell |
+
+**Modell-Empfehlungen:**
+
+| Modell | Geschwindigkeit | Genauigkeit | VRAM |
+|--------|----------------|-------------|------|
+| `turbo` | sehr schnell | gut | ~2 GB |
+| `large-v2` | langsamer | sehr gut | ~5 GB |
+| `large-v3` | langsamer | am besten | ~5 GB |
+
+---
 
 ## Ausgabe
 
-Für jede Eingabedatei `video.mp4` werden drei Dateien erzeugt:
+Für jede Eingabedatei `video.mp4` werden drei Dateien im selben Ordner erzeugt:
 
 ### `video_transcript.txt`
 Lesbares Transkript, nach Sprecher gruppiert:
 ```
 [SPEAKER_01]
-  [00:00.03 - 00:15.50] Wirklich so Kleeblätter, halt in Vorproduktion mal...
-  [00:23.14 - 00:30.40] Die Option haben wir dann ja immer noch für...
+  [00:00.00 - 00:12.40] Lorem ipsum dolor sit amet, consectetur adipiscing elit...
+  [00:18.20 - 00:31.50] Sed do eiusmod tempor incididunt ut labore et dolore magna...
 
 [SPEAKER_02]
-  [00:30.46 - 00:37.90] Ja, wir waren ja schon ein paar Mal hier bei euch...
+  [00:31.80 - 00:45.10] Ut enim ad minim veniam, quis nostrud exercitation ullamco...
+  [00:48.30 - 01:02.70] Duis aute irure dolor in reprehenderit in voluptate velit...
 ```
 
 ### `video_speakers.srt`
-SRT-Untertitel mit Sprecher-Labels für Adobe Premiere:
+Standard-Untertitelformat mit Sprecher-Labels:
 ```
 1
-00:00:00,030 --> 00:00:15,590
-[SPEAKER_01] Wirklich so Kleeblätter, halt in Vorproduktion mal...
+00:00:00,000 --> 00:00:12,400
+[SPEAKER_01] Lorem ipsum dolor sit amet, consectetur adipiscing elit...
 
 2
-00:00:30,460 --> 00:00:37,900
-[SPEAKER_02] Ja, wir waren ja schon ein paar Mal hier bei euch...
+00:00:31,800 --> 00:00:45,100
+[SPEAKER_02] Ut enim ad minim veniam, quis nostrud exercitation ullamco...
 ```
-**Import in Premiere:** Datei → Importieren → `video_speakers.srt`
 
 ### `video_markers.csv`
-Sequence Markers für Adobe Premiere:
+Zeitstempel-Tabelle mit Sprecherzuordnung:
 ```
-Name    Description    In             Out            Duration       Marker Type
-SPEAKER_01    Wirklich so Kleeblätter...    00:00:00:01    00:00:30:11    00:00:30:10    Comment
-SPEAKER_02    Ja, wir waren ja schon...     00:00:30:11    00:00:44:12    00:00:14:01    Comment
+Name        Description                    In             Out            Duration       Marker Type
+SPEAKER_01  Lorem ipsum dolor sit amet...  00:00:00:00    00:00:31:10    00:00:31:10    Comment
+SPEAKER_02  Ut enim ad minim veniam...     00:00:31:20    00:01:05:08    00:00:33:13    Comment
 ```
-**Import in Premiere:** Markers Panel → (Hamburger-Menü) → Marker importieren → `video_markers.csv`
+
+---
 
 ## Import-Anleitungen
 
@@ -145,46 +212,49 @@ SPEAKER_02    Ja, wir waren ja schon...     00:00:30:11    00:00:44:12    00:00:
 4. Im Caption-Track sind alle Segmente mit `[SPEAKER_01]` / `[SPEAKER_02]` beschriftet
 5. Optional: Im **Captions-Panel** Schriftart und Stil anpassen
 
+Offizielle Dokumentation: [Captions in Premiere Pro](https://helpx.adobe.com/premiere-pro/using/working-with-captions.html)
+
 #### CSV als Sequence Markers
-1. **Markers Panel** öffnen (Fenster → Marker)
+1. **Markers Panel** öffnen: Fenster → Marker
 2. Hamburger-Menü (☰) oben rechts → **Marker importieren**
 3. `video_markers.csv` auswählen
-4. Marker erscheinen auf der Timeline, farblich nach Sprecher sortierbar
-5. Nützlich für schnelle Navigation: Wo spricht welcher Sprecher?
+4. Marker erscheinen auf der Timeline — nützlich zur Navigation zwischen Sprechern
 
-> **Tipp:** Richtige FPS einstellen damit Marker exakt sitzen:
-> `python transcribe_full.py video.mp4 --fps 24` (oder 25, 30, 60)
+> **Wichtig:** Die FPS der CSV muss zur Premiere-Sequenz passen.
+> Standard ist 25 fps — bei anderen Framerates `--fps 24` / `--fps 30` / `--fps 60` angeben.
+
+Offizielle Dokumentation: [Marker in Premiere Pro](https://helpx.adobe.com/premiere-pro/using/markers.html)
 
 ---
 
 ### DaVinci Resolve
 
 #### SRT als Untertitel
-1. **Media Pool** → Rechtsklick → **Import Media** → `video_speakers.srt`
-2. In den **Edit**-Tab wechseln
-3. SRT-Clip aus dem Media Pool auf die Timeline ziehen — wird als **Subtitle Track** eingefügt
-4. Alternativ: Timeline → **Import Subtitles** → `video_speakers.srt`
-5. Im **Inspector** lassen sich Schrift, Farbe und Position anpassen
+1. Im **Cut** oder **Edit**-Tab: **Timeline → Import Subtitles** → `video_speakers.srt`
+2. Alternativ: Im Media Pool Rechtsklick → **Import Media** → SRT-Datei wählen, dann auf die Timeline ziehen
+3. Ein **Subtitle Track** wird automatisch erstellt
+4. Im **Inspector** lassen sich Schrift, Farbe und Position anpassen
 
-#### TXT als Referenz im Schnitt
-- `video_transcript.txt` in einem Texteditor nebenher öffnen
-- Dient als Inhaltsverzeichnis: Sprecher + Timestamps auf einen Blick
-- Hilfreich um schnell zu finden wo ein bestimmtes Thema besprochen wurde
+> DaVinci Resolve Free unterstützt SRT-Import vollständig.
+> Der Premiere-Markers-CSV ist nicht mit Resolve kompatibel — die SRT-Spur ist hier die richtige Wahl.
 
-> **Hinweis:** DaVinci Resolve Free unterstützt SRT-Import vollständig. Markers-CSV ist Resolve-spezifisch und nicht kompatibel — die SRT-Spur ist hier die bessere Option.
+Offizielle Dokumentation: [DaVinci Resolve Manual](https://documents.blackmagicdesign.com/UserManuals/DaVinci-Resolve-Manual.pdf) (Kapitel "Subtitles and Captions")
 
 ---
 
 ### Final Cut Pro
 
 #### SRT als Captions
-1. Projekt öffnen und das Video in der Timeline haben
+1. Projekt öffnen, Video in der Timeline
 2. **Datei → Importieren → Captions** → `video_speakers.srt` auswählen
 3. Im Dialog **"Zu vorhandenem Clip hinzufügen"** wählen
 4. Captions erscheinen als eigene Spur über dem Video-Clip
 5. Im **Caption Editor** (Darstellung → Captions anzeigen) lassen sich Texte und Timing nachbearbeiten
 
-> **Hinweis:** Final Cut Pro unterstützt SRT nativ seit Version 10.6.5. Bei älteren Versionen ggf. zuerst in CEA-608 konvertieren (z.B. mit [Subtitle Edit](https://www.nikse.dk/subtitleedit)).
+> SRT wird nativ unterstützt ab Final Cut Pro 10.6.5.
+> Bei älteren Versionen: SRT zuerst mit [Subtitle Edit](https://www.nikse.dk/subtitleedit) in CEA-608 konvertieren.
+
+Offizielle Dokumentation: [Captions in Final Cut Pro](https://support.apple.com/guide/final-cut-pro/captions-overview-ver346df5f4/mac)
 
 ---
 
@@ -192,22 +262,22 @@ SPEAKER_02    Ja, wir waren ja schon...     00:00:30:11    00:00:44:12    00:00:
 
 | Anwendung | Format | Verwendung |
 |-----------|--------|-----------|
-| YouTube Studio | `.srt` | Video hochladen → Untertitel → Hochladen |
-| Vimeo | `.srt` | Video-Einstellungen → Untertitel |
-| VLC / jeder Player | `.srt` | Gleicher Ordner wie Video, automatisch erkannt |
-| Word / Google Docs | `.txt` | Protokoll, Transkript-Dokument |
-| Notion / Obsidian | `.txt` | Notizen, Wissensdatenbank |
-| Excel / Numbers | `.csv` | Auswertung, Zeiterfassung, Protokoll |
+| YouTube Studio | `.srt` | Video hochladen → Untertitel → Datei hochladen |
+| Vimeo | `.srt` | Video-Einstellungen → Distribution → Untertitel |
+| VLC / jeder Player | `.srt` | Gleicher Ordner + gleicher Dateiname wie Video → automatisch erkannt |
+| Word / Google Docs | `.txt` | Öffnen oder einfügen als Protokoll / Transkript-Dokument |
+| Notion / Obsidian | `.txt` | Direkt als Notiz einfügen |
+| Excel / Numbers | `.csv` | Öffnen für Auswertung, Zeiterfassung, Dokumentation |
 
 ### Sprecher umbenennen
 
 In allen Ausgabedateien heißen Sprecher `SPEAKER_01`, `SPEAKER_02` etc.
-Um echte Namen zu vergeben einfach **Suchen & Ersetzen** nutzen:
+Einfach mit **Suchen & Ersetzen** in jedem Texteditor umbenennen:
 
 - `SPEAKER_01` → `Max Mustermann`
 - `SPEAKER_02` → `Jana Schmidt`
 
-Funktioniert in jedem Texteditor, Word, VS Code etc.
+---
 
 ## Genutzte Bibliotheken & Projekte
 
@@ -219,10 +289,8 @@ Funktioniert in jedem Texteditor, Word, VS Code etc.
 | **OpenAI Whisper** | Original Whisper ASR Modell | https://github.com/openai/whisper |
 | **PyTorch** | Deep Learning Framework | https://pytorch.org |
 
+---
+
 ## Lizenz
 
 MIT License — siehe [LICENSE](LICENSE)
-
----
-
-*Erstellt mit [Claude Code](https://claude.ai/claude-code)*
