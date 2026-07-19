@@ -185,7 +185,7 @@ def transcribe_full(
     # --- 1. Transkription ---
     print(f"\n[1/3] Lade WhisperX-Modell: {model_name} (device={device}, compute={compute_type})...")
     try:
-        model = whisperx.load_model(model_name, device=device, compute_type=compute_type)
+        model = whisperx.load_model(model_name, device=device, compute_type=compute_type, language=language)
     except Exception as exc:
         if is_torchaudio_runtime_error(exc):
             exit_with_torch_audio_help(exc)
